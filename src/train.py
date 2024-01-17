@@ -25,3 +25,9 @@ class LitCRNN(pl.LightningModule):
                                     lstm_input=self.hparams.lstm_input)
         self.model.apply(self.model.weights_init)
         self.criterion = CTCLoss(reduction='mean')
+
+
+    def forward(self, x):
+        logit = self.model(x)
+        logit = torch.transpose(logit, 1, 0)
+        return logit
