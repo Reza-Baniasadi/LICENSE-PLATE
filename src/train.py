@@ -31,3 +31,13 @@ class LitCRNN(pl.LightningModule):
         logit = self.model(x)
         logit = torch.transpose(logit, 1, 0)
         return logit
+    
+
+    def get_loss(self, batch):
+        images, labels, labels_lengths = batch
+        labels_lengths = labels_lengths.squeeze(1)
+        batch_size = images.size(0)
+        logits = self.model(images)
+        input_lengths = torch.LongTensor([logits.size(0)] * batch_size)
+        loss = self.criterion(logits, labels, input_lengths, labels_lengths)
+        return loss, batch_size
