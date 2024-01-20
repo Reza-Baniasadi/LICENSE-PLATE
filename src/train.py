@@ -41,3 +41,12 @@ class LitCRNN(pl.LightningModule):
         input_lengths = torch.LongTensor([logits.size(0)] * batch_size)
         loss = self.criterion(logits, labels, input_lengths, labels_lengths)
         return loss, batch_size
+    
+    @staticmethod
+    def calculate_metrics(outputs):
+        r_loss, size = 0, 0
+        for row in outputs:
+            r_loss += row["loss"]
+            size += row["bs"]
+        loss = r_loss / size
+        return loss
