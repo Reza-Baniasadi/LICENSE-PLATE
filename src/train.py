@@ -59,3 +59,7 @@ class LitCRNN(pl.LightningModule):
     def training_step(self, batch):
         loss, bs = self.get_loss(batch)
         return {"loss": loss, "bs": bs}
+    
+    def validation_step(self, batch):
+        loss, bs = self.get_loss(batch)
+        return {"loss": loss, "bs": bs}
