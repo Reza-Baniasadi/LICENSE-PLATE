@@ -50,3 +50,7 @@ class LitCRNN(pl.LightningModule):
             size += row["bs"]
         loss = r_loss / size
         return loss
+    
+    def test_step(self, batch, batch_idx):
+        loss, bs = self.get_loss(batch)
+        return {"loss": loss, "bs": bs}
