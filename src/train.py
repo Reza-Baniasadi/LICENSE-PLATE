@@ -63,3 +63,10 @@ class LitCRNN(pl.LightningModule):
     def validation_step(self, batch):
         loss, bs = self.get_loss(batch)
         return {"loss": loss, "bs": bs}
+    
+
+    def configure_optimizers(self):
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.hparams.lr)
+        scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=self.hparams.lr_reduce_factor,
+                                      patience=self.hparams.lr_patience, verbose=True, min_lr=self.hparams.min_lr)
+        return {"optimizer": optimizer, "lr_scheduler": scheduler, "monitor": "val_loss"}
