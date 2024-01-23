@@ -70,3 +70,24 @@ class LitCRNN(pl.LightningModule):
         scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=self.hparams.lr_reduce_factor,
                                       patience=self.hparams.lr_patience, verbose=False, min_lr=self.hparams.min_lr)
         return {"optimizer": optimizer, "lr_scheduler": scheduler, "monitor": "val_loss"}
+    
+    @staticmethod
+    def get_loaders(config):
+        train_dataset = CRNNDataset(root=config.train_directory, characters=config.alphabets,
+                                    transform=config.train_transform)
+        train_loader = torch.utils.data.DataLoader(train_dataset,
+                                                   batch_size=config.batch_size,
+                                                   shuffle=True,
+                                                   num_workers=config.n_workers,
+                                                   collate_fn=train_dataset.collate_fn
+                                                   )
+
+        val_dataset = CRNNDataset(root=config.val_directory, characters=config.alphabets,
+                                  transform=config.val_transform)
+        val_loader = torch.utils.data.DataLoader(val_dataset,
+                                                 shuffle=True,
+                                                 batch_size=config.batch_size,
+                                                 num_workers=config.n_workers,
+                                                 collate_fn=val_dataset.collate_fn)
+
+        return train_loader, val_loader
