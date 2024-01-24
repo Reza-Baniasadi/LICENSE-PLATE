@@ -91,3 +91,24 @@ class LitCRNN(pl.LightningModule):
                                                  collate_fn=val_dataset.collate_fn)
 
         return train_loader, val_loader
+    
+    def main():
+        parser = ArgumentParser()
+        parser.add_argument("--train_directory", type=Path,
+                            default="/home/ai/projects/vehicle-plate-recognition-training/recognition/datasets/train",
+                            help="path to the dataset, default: ./dataset")
+        parser.add_argument("--val_directory", type=Path,
+                            default="/home/ai/projects/vehicle-plate-recognition-training/recognition/datasets/val",
+                            help="path to the dataset, default: ./dataset")
+        parser.add_argument("--output_dir", type=Path, default="./output",
+                            help="path to the output directory, default: ./output")
+        parser.add_argument("--epochs", type=int, default=100, help="number of training epochs")
+        parser.add_argument("--device", default="cuda", help="what should be the device for training, default is cuda")
+        parser.add_argument("--mean", nargs="+", type=float, default=[0.4845], help="dataset channel-wise mean")
+        parser.add_argument("--std", nargs="+", type=float, default=[0.1884], help="dataset channel-wise std")
+        parser.add_argument("--img_w", type=int, default=100, help="dataset img width size")
+        parser.add_argument("--n_workers", type=int, default=8, help="number of workers used for dataset collection")
+        parser.add_argument("--batch_size", type=int, default=128, help="batch size number")
+        parser.add_argument("--alphabets", default='ابپتشثجدزسصطعفقکگلمنوهی+۰۱۲۳۴۵۶۷۸۹',
+                            help="alphabets used in the process")
+        parser.add_argument("--visualize", action="store_true", help="Visualize data-loader")
