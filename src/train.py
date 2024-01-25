@@ -118,3 +118,4 @@ class LitCRNN(pl.LightningModule):
         config.update_config_param(args)
 
         output_dir = mkdir_incremental(config.output_dir)
+        logger = get_logger("pytorch-lightning-image-classification", log_path=output_dir / "log.log")
