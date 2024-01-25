@@ -116,3 +116,5 @@ class LitCRNN(pl.LightningModule):
         args = parser.parse_args()
         config = Config()
         config.update_config_param(args)
+
+        output_dir = mkdir_incremental(config.output_dir)
