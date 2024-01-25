@@ -112,3 +112,7 @@ class LitCRNN(pl.LightningModule):
         parser.add_argument("--alphabets", default='ابپتشثجدزسصطعفقکگلمنوهی+۰۱۲۳۴۵۶۷۸۹',
                             help="alphabets used in the process")
         parser.add_argument("--visualize", action="store_true", help="Visualize data-loader")
+
+        args = parser.parse_args()
+        config = Config()
+        config.update_config_param(args)
