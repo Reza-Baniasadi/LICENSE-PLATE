@@ -119,3 +119,4 @@ class LitCRNN(pl.LightningModule):
 
         output_dir = mkdir_incremental(config.output_dir)
         logger = get_logger("pytorch-lightning-image-classification", log_path=output_dir / "log.log")
+        early_stopping = EarlyStopping(monitor='val_loss', patience=config.early_stopping_patience)
