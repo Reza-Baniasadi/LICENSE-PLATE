@@ -122,3 +122,5 @@ class LitCRNN(pl.LightningModule):
         early_stopping = EarlyStopping(monitor='val_loss', patience=config.early_stopping_patience)
         model_checkpoint = ModelCheckpoint(dirpath=output_dir, filename=config.file_name, monitor="val_loss",
                                        verbose=True)
+
+        learning_rate_monitor = LearningRateMonitor(logging_interval="epoch")
