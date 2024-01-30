@@ -124,3 +124,13 @@ class LitCRNN(pl.LightningModule):
                                        verbose=True)
 
         learning_rate_monitor = LearningRateMonitor(logging_interval="epoch")
+
+        trainer = pl.Trainer(gpus=1 if config.device == "cuda" else 0,
+                         max_epochs=config.epochs,
+                         min_epochs=config.epochs // 10,
+                         callbacks=[early_stopping, model_checkpoint, learning_rate_monitor],
+                         default_root_dir=output_dir)
+        
+        list_crnn = LitCRNN(config.img_h, config.n_channels, config.n_classes, config.n_hidden, config.lstm_input, config.lr,
+                       config.lr_reduce_factor, config.lr_patience, config.min_lr)
+        train_loader, val_loader = lit_crnn.get_loaders(config)
