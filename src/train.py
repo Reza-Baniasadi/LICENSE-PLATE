@@ -134,3 +134,10 @@ class LitCRNN(pl.LightningModule):
         list_crnn = LitCRNN(config.img_h, config.n_channels, config.n_classes, config.n_hidden, config.lstm_input, config.lr,
                        config.lr_reduce_factor, config.lr_patience, config.min_lr)
         train_loader, val_loader = lit_crnn.get_loaders(config)
+
+        if args.visualize:
+            print("[INFO] Visualizing train-loader")
+            visualize_data_loader(train_loader, mean=config.mean, std=config.std)
+            print("[INFO] Visualizing val-loader")
+            visualize_data_loader(val_loader, mean=config.mean, std=config.std)
+            exit(0)
