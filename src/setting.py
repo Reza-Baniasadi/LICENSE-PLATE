@@ -22,3 +22,6 @@ class BasicConfig:
     train_directory = '/home/ai/projects/vehicle-plate-recognition-training/recognition/datasets/train'
     val_directory = '/home/ai/projects/vehicle-plate-recognition-training/recognition/datasets/val'
     output_dir = "output"
+
+    def update_basic(self):
+        self.n_classes = len(self.alphabets) + 1
