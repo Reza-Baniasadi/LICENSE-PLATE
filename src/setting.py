@@ -25,3 +25,20 @@ class BasicConfig:
 
     def update_basic(self):
         self.n_classes = len(self.alphabets) + 1
+
+
+@dataclass(init=True, repr=True)
+class AugConfig(BasicConfig):
+    train_transform = transforms.Compose([
+        transforms.Grayscale(),
+        transforms.Resize((BasicConfig.img_h, BasicConfig.img_w)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=BasicConfig.mean, std=BasicConfig.std), ]
+    )
+    val_transform = transforms.Compose([
+        transforms.Grayscale(),
+        transforms.Scale()
+        transforms.Resize((BasicConfig.img_h, BasicConfig.img_w)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=BasicConfig.mean, std=BasicConfig.std), ]
+    )
