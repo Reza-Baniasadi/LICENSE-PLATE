@@ -29,16 +29,18 @@ class BasicConfig:
 
 @dataclass(init=True, repr=True)
 class AugConfig(BasicConfig):
-    train_transform = transforms.Compose([
-        transforms.Grayscale(),
-        transforms.Resize((BasicConfig.img_h, BasicConfig.img_w)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=BasicConfig.mean, std=BasicConfig.std), ]
-    )
+    train_transform = A.Compose(
+        [A.Rotate(limit=10, p=0.2),
+         A.RandomScale(scale_limit=0.2),
+         A.Resize(height=BasicConfig.img_h, width=BasicConfig.img_w),
+         A.Normalize(BasicConfig.mean, BasicConfig.std, max_pixel_value=255.0),
+         A.ToGray(always_apply=True, p=1),
+         ToTensorV2()
+         ])
     val_transform = transforms.Compose([
         transforms.Grayscale(),
         transforms.Scale()
         transforms.Resize((BasicConfig.img_h, BasicConfig.img_w)),
         transforms.ToTensor(),
         transforms.Normalize(mean=BasicConfig.mean, std=BasicConfig.std), ]
-    )
+        )
