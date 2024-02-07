@@ -44,3 +44,11 @@ class AugConfig(BasicConfig):
          A.ToGray(always_apply=True, p=1),
          ToTensorV2()
          ])
+    
+    def update_aug(self):
+        self.train_transform = transforms.Compose([
+            transforms.Grayscale(),
+            transforms.Resize((self.img_h, self.img_w)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=self.mean, std=self.std), ]
+        )
