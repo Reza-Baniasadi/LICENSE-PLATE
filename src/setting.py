@@ -54,3 +54,9 @@ class AugConfig(BasicConfig):
              A.ToGray(always_apply=True, p=1),
              ToTensorV2()
              ])
+        self.val_transform = A.Compose(
+            [A.Resize(height=self.img_h, width=self.img_w),
+             A.Normalize(self.mean, self.std, max_pixel_value=255.0),
+             A.ToGray(always_apply=True, p=1),
+             ToTensorV2()
+             ])
