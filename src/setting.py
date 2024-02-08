@@ -46,9 +46,11 @@ class AugConfig(BasicConfig):
          ])
     
     def update_aug(self):
-        self.train_transform = transforms.Compose([
-            transforms.Grayscale(),
-            transforms.Resize((self.img_h, self.img_w)),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=self.mean, std=self.std), ]
-        )
+        self.train_transform = A.Compose(
+            [A.Rotate(limit=10, p=0.2),
+             A.RandomScale(scale_limit=0.2),
+             A.Resize(height=self.img_h, width=self.img_w),
+             A.Normalize(self.mean, self.std, max_pixel_value=255.0),
+             A.ToGray(always_apply=True, p=1),
+             ToTensorV2()
+             ])
