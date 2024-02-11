@@ -60,3 +60,24 @@ class AugConfig(BasicConfig):
              A.ToGray(always_apply=True, p=1),
              ToTensorV2()
              ])
+        
+@dataclass(init=True)
+class Config(AugConfig):
+    n_hidden = 256  # size of the lstm hidden state
+    lstm_input = 64  # size of the lstm_input feature size
+    n_channels = 1
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    lr = 0.0005
+    lr_patience = 10
+    min_lr = 5e-6
+    lr_reduce_factor = 0.1
+    batch_size = 128
+    epochs = 200
+    n_workers = 8
+
+    alphabets = ALPHABETS[BasicConfig.alphabet_name]
+    char2label = dict()
+    label2char = dict()
+
+    # Early stopping
+    early_stopping_patience = 30
