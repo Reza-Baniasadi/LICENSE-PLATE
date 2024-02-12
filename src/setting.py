@@ -81,3 +81,19 @@ class Config(AugConfig):
 
     # Early stopping
     early_stopping_patience = 30
+
+    def update_config_param(self, args):
+        if isinstance(args, Namespace):
+            variables = vars(args)
+        elif isinstance(args, dict):
+            variables = args
+        else:
+            raise ValueError()
+        for k, v in variables.items():
+            if hasattr(self, k):
+                setattr(self, k, v)
+            elif k == "visualize":
+                print("[INFO] Skipped visualize argument!")
+            else:
+                raise ValueError(f"value {k} is not defined in Config...")
+        self.update()
