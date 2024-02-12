@@ -93,7 +93,7 @@ class Config(AugConfig):
             if hasattr(self, k):
                 setattr(self, k, v)
             elif k == "visualize":
-                print("[INFO] Skipped visualize argument!")
+                print(" Skipped visualize argument!")
             else:
                 raise ValueError(f"value {k} is not defined in Config...")
         self.update()
