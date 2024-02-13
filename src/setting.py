@@ -97,3 +97,10 @@ class Config(AugConfig):
             else:
                 raise ValueError(f"value {k} is not defined in Config...")
         self.update()
+
+
+    def update(self):
+        self.char2label = {char: i + 1 for i, char in enumerate(self.alphabets)}
+        self.label2char = {label: char for char, label in self.char2label.items()}
+        self.update_basic()
+        self.update_aug()
