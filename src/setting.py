@@ -104,3 +104,7 @@ class Config(AugConfig):
         self.label2char = {label: char for char, label in self.char2label.items()}
         self.update_basic()
         self.update_aug()
+
+    def __repr__(self):
+        variables = vars(self)
+        return f"{self.__class__.__name__} -> " + ", ".join(f"{k}: {v}" for k, v in variables.items())
