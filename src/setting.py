@@ -72,7 +72,7 @@ class Config(AugConfig):
     min_lr = 5e-6
     lr_reduce_factor = 0.1
     batch_size = 128
-    epochs = 200
+    epochs = 200 
     n_workers = 8
 
     alphabets = ALPHABETS[BasicConfig.alphabet_name]
@@ -108,3 +108,14 @@ class Config(AugConfig):
     def __repr__(self):
         variables = vars(self)
         return f"{self.__class__.__name__} -> " + ", ".join(f"{k}: {v}" for k, v in variables.items())
+    
+
+    def vars(self) -> dict:
+        out = dict()
+        for key in dir(self):
+            val = getattr(self, key)
+            if (key.startswith("__") and key.endswith("__")) or type(val).__name__ == "method":
+                continue
+            else:
+                out[key] = val
+        return out
