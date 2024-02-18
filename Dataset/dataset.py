@@ -25,3 +25,7 @@ class CRNNDataset(Dataset):
                                                                                  chars2label=self.char2label,
                                                                                  logger=logger)
         self.n_classes = len(self.label2char) + 1  
+
+    @staticmethod
+    def text2label(char2label: dict, text: str):
+        return [char2label[t] for t in text]
