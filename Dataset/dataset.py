@@ -21,9 +21,7 @@ class CRNNDataset(Dataset):
         self.transform = transform
         self.char2label = {char: i + 1 for i, char in enumerate(characters)}
         self.label2char = {label: char for char, label in self.char2label.items()}
-        self.image_paths, self.labels, self.labels_length = self.get_image_paths(root, characters,
-                                                                                 chars2label=self.char2label,
-                                                                                 logger=logger)
+        self.image_paths, self.labels, self.labels_length = self.get_image_paths(root, characters,chars2label=self.char2label,logger=logger)
         self.n_classes = len(self.label2char) + 1  
 
     @staticmethod
