@@ -32,3 +32,28 @@ class CRNNDataset(Dataset):
     def get_image_paths(root, chars, chars2label, logger=None):
         paths, labels, labels_length = [], [], []
         discards = 0
+        for img_name in os.listdir(root):
+            img_path = join(root, img_name)
+            try:
+                if split_extension(img_name)[-1].lower() in ['.jpg', '.png', '.jpeg']:
+                    text = CRNNDataset.get_label(img_path)
+                    is_valid, character = CRNNDataset.check_validity(text, chars)
+                    if is_valid:
+                        label = CRNNDataset.text2label(chars2label, text)
+                        labels.append(label)
+                        paths.append(img_path)
+                        labels_length.append(len(label))
+                    else:
+                        log_print(logger,
+                                  f"[Warning] text for sample: {img_path} is invalid because of the following character: {character}")
+                        discards += 1
+                else:
+                    log_print(logger, f"[Warning] sample: {img_path} does not have a valid extension. Skipping...")
+                    discards += 1
+            except:
+                log_print(logger, f"[Warning] sample: {img_path} is not valid. Skipping...")
+                discards += 1
+        assert len(labels) == len(paths)
+        log_print(logger, f"Successfully gathered {len(labels)} samples and discarded {discards} samples!")
+
+        return paths, labels, labels_length
