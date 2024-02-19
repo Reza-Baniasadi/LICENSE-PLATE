@@ -27,3 +27,8 @@ class CRNNDataset(Dataset):
     @staticmethod
     def text2label(char2label: dict, text: str):
         return [char2label[t] for t in text]
+    
+    @staticmethod
+    def get_image_paths(root, chars, chars2label, logger=None):
+        paths, labels, labels_length = [], [], []
+        discards = 0
