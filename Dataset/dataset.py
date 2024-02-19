@@ -57,3 +57,4 @@ class CRNNDataset(Dataset):
         log_print(logger, f"Successfully gathered {len(labels)} samples and discarded {discards} samples!")
 
         return paths, labels, labels_length
+    
