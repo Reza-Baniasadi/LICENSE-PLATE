@@ -58,3 +58,6 @@ class CRNNDataset(Dataset):
 
         return paths, labels, labels_length
     
+    def __len__(self):
+        return len(self.image_paths)
+    
