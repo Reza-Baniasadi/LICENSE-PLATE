@@ -65,7 +65,7 @@ class CRNNDataset(Dataset):
         assert index <= len(self), 'index range error'
         img_path = self.image_paths[index]
         if isinstance(self.transform, albumentations.core.composition.Compose):
-            img = cv2.imread(img_path)[..., ::-1]  
+            #img = cv2.imread(img_path)[..., ::-1]  
             img = np.array(Image.open(img_path))[..., :3]
             img = self.transform(image=img)['image'][0:1, ...].unsqueeze(0)  
         else:
