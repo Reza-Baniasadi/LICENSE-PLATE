@@ -76,3 +76,10 @@ class CRNNDataset(Dataset):
 
         return img, label, label_length
     
+    @staticmethod
+    def check_validity(text, chars):
+        for c in text:
+            if c not in chars:
+                return False, c
+        return True, None
+    
