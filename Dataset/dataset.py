@@ -82,4 +82,12 @@ class CRNNDataset(Dataset):
             if c not in chars:
                 return False, c
         return True, None
-    
+
+    @staticmethod
+    def collate_fn(batch):
+        images, labels, labels_lengths = zip(*batch)
+        images = torch.cat(images, dim=0)
+        labels = [label.squeeze(0) for label in labels]
+        labels = nn.utils.rnn.pad_sequence(labels, padding_value=-100).T
+        labels_lengths = torch.cat(labels_lengths, dim=0)
+        return images, labels, labels_lengths
