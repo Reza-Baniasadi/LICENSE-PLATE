@@ -91,3 +91,23 @@ class CRNNDataset(Dataset):
         labels = nn.utils.rnn.pad_sequence(labels, padding_value=-100).T
         labels_lengths = torch.cat(labels_lengths, dim=0)
         return images, labels, labels_lengths
+    
+def get_mean_std(dataset_dir, alphabets, batch_size, img_h, img_w):
+
+    transformations = transforms.Compose([
+        transforms.Grayscale(),
+        transforms.Resize((img_h, img_w)),
+        transforms.ToTensor()]
+    )
+
+    dataset = CRNNDataset(root=dataset_dir, transform=transformations, characters=alphabets)
+    data_loader = DataLoader(dataset, batch_size=batch_size, collate_fn=dataset.collate_fn)
+    mean, std = 0, 0
+    n_samples = len(dataset)
+    for images, labels, labels_lengths in tqdm(data_loader, desc="Getting mean and std"):
+        # channel wise
+        mean += torch.sum(torch.mean(images, dim=(2, 3)), dim=0)
+        std += torch.sum(torch.std(images, dim=(2, 3)), dim=0)
+    mean /= n_samples
+    std /= n_samples
+    return [round(m, 4) for m in mean.numpy().tolist()], [round(s, 4) for s in std.numpy().tolist()]
