@@ -111,3 +111,17 @@ def get_mean_std(dataset_dir, alphabets, batch_size, img_h, img_w):
     mean /= n_samples
     std /= n_samples
     return [round(m, 4) for m in mean.numpy().tolist()], [round(s, 4) for s in std.numpy().tolist()]
+
+
+if __name__ == '__main__':
+    parser = ArgumentParser()
+    parser.add_argument("--dataset_dir", help="path to dataset")
+    parser.add_argument("--batch_size", default=128, type=int)
+    parser.add_argument("--alphabets", default='ابپتشثجدزسصطعفقکگلمنوهی+۰۱۲۳۴۵۶۷۸۹', help="alphabets used in dataset")
+    parser.add_argument("--img_h", default=32, type=int)
+    parser.add_argument("--img_w", default=100, type=int)
+    args = parser.parse_args()
+
+    mean, std = get_mean_std(args.dataset_dir, alphabets=args.alphabets, batch_size=args.batch_size,
+                             img_h=args.img_h, img_w=args.img_w)
+    log_print(None, f"MEAN: {mean}, STD: {std}")
