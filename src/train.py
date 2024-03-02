@@ -14,9 +14,9 @@ from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint, Learning
 torch.backends.cudnn.benchmark = True
 
 
-class LitCRNN(pl.LightningModule):
+class CRNN(pl.LightningModule):
     def __init__(self, img_h, n_channels, n_classes, n_hidden, lstm_input, lr, lr_reduce_factor, lr_patience, min_lr):
-        super(LitCRNN, self).__init__()
+        super(CRNN, self).__init__()
         self.save_hyperparameters()
         self.model = CRNNModelTorch(img_h=self.hparams.img_h,
                                     n_channels=self.hparams.n_channels,
@@ -33,7 +33,7 @@ class LitCRNN(pl.LightningModule):
         return logit
     
 
-    def get_loss(self, batch):
+    def loss(self, batch):
         images, labels, labels_lengths = batch
         labels_lengths = labels_lengths.squeeze(1)
         batch_size = images.size(0)
@@ -43,7 +43,7 @@ class LitCRNN(pl.LightningModule):
         return loss, batch_size
     
     @staticmethod
-    def calculate_metrics(outputs):
+    def metrics(outputs):
         r_loss, size = 0, 0
         for row in outputs:
             r_loss += row["loss"]
@@ -51,21 +51,20 @@ class LitCRNN(pl.LightningModule):
         loss = r_loss / size
         return loss
     
-    def test_step(self, batch):
-        loss, bs = self.get_loss(batch)
+    def test_s(self, batch):
+        bs = self.loss(batch)
+        loss  = self.loss(batch)
         return {"loss": loss, "bs": bs}
     
 
-    def training_step(self, batch):
-        loss, bs = self.get_loss(batch)
-        return {"loss": loss, "bs": bs}
-    
-    def validation_step(self, batch):
-        loss, bs = self.get_loss(batch)
+    def training(self, batch):
+        bs = self.loss(batch)
+        loss = self.loss(batch)
         return {"loss": loss, "bs": bs}
     
 
-    def configure_optimizers(self):
+
+    def optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.hparams.lr)
         scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=self.hparams.lr_reduce_factor,
                                       patience=self.hparams.lr_patience, verbose=False, min_lr=self.hparams.min_lr)
