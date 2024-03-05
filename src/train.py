@@ -78,3 +78,19 @@ class Config:
         grid = torchvision.utils.make_grid(imgs, nrow=4)
         plt.imshow(grid.permute(1, 2, 0))
         plt.show()
+
+class LitCRNN(pl.LightningModule):
+        def __init__(self, img_h, n_channels, n_classes, n_hidden, lstm_input,
+                    lr, lr_reduce_factor, lr_patience, min_lr):
+            super().__init__()
+            self.save_hyperparameters()
+
+            self.conv = nn.Sequential(
+                nn.Conv2d(n_channels, 64, 3, 1, 1),
+                nn.ReLU(),
+                nn.MaxPool2d(2, 2)
+            )
+            self.rnn = nn.LSTM(lstm_input, n_hidden, num_layers=2,
+                            bidirectional=True, batch_first=True)
+            self.fc = nn.Linear(n_hidden * 2, n_classes)
+            self.lr = lr
