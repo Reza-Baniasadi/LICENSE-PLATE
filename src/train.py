@@ -94,3 +94,14 @@ class LitCRNN(pl.LightningModule):
                             bidirectional=True, batch_first=True)
             self.fc = nn.Linear(n_hidden * 2, n_classes)
             self.lr = lr
+
+
+
+        def forward(self, x):
+            x = self.conv(x)  # [B, C, H, W]
+            x = x.permute(0, 3, 1, 2)  # [B, W, C, H]
+            B, W, C, H = x.size()
+            x = x.reshape(B, W, C * H)
+            x, _ = self.rnn(x)
+            x = self.fc(x)
+            return x
