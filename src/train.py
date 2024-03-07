@@ -105,3 +105,12 @@ class LitCRNN(pl.LightningModule):
             x, _ = self.rnn(x)
             x = self.fc(x)
             return x
+
+
+        def training_step(self, batch, batch_idx):
+            imgs, labels = batch
+            preds = self(imgs)
+            
+            loss = F.cross_entropy(preds.view(-1, preds.size(-1)), labels.view(-1))
+            self.log("train_loss", loss)
+            return loss
