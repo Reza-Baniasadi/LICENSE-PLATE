@@ -114,3 +114,11 @@ class LitCRNN(pl.LightningModule):
             loss = F.cross_entropy(preds.view(-1, preds.size(-1)), labels.view(-1))
             self.log("train_loss", loss)
             return loss
+        
+
+        def validation_step(self, batch, batch_idx):
+            imgs, labels = batch
+            preds = self(imgs)
+            loss = F.cross_entropy(preds.view(-1, preds.size(-1)), labels.view(-1))
+            self.log("val_loss", loss)
+            return loss
