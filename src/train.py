@@ -122,3 +122,28 @@ class LitCRNN(pl.LightningModule):
             loss = F.cross_entropy(preds.view(-1, preds.size(-1)), labels.view(-1))
             self.log("val_loss", loss)
             return loss
+        
+        def configure_optimizers(self):
+            optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
+            scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+                optimizer, factor=self.hparams.lr_reduce_factor,
+                patience=self.hparams.lr_patience, min_lr=self.hparams.min_lr
+            )
+            return {"optimizer": optimizer, "lr_scheduler": scheduler, "monitor": "val_loss"}
+        
+
+        def get_loaders(config):
+            transform = transforms.Compose([
+                transforms.Resize((config.img_h, config.img_w)),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=config.mean, std=config.std)
+            ])
+
+            train_dataset = datasets.ImageFolder(config.train_directory, transform=transform)
+            val_dataset = datasets.ImageFolder(config.val_directory, transform=transform)
+
+            train_loader = DataLoader(train_dataset, batch_size=config.batch_size,
+                                    shuffle=True, num_workers=config.n_workers)
+            val_loader = DataLoader(val_dataset, batch_size=config.batch_size,
+                                    shuffle=False, num_workers=config.n_workers)
+            return train_loader, val_loader
