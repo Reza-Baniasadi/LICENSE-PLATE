@@ -39,7 +39,7 @@ def main():
     learning_rate_monitor = LearningRateMonitor(logging_interval="epoch")
 
     trainer = pl.Trainer(
-        accelerator="gpu" if config.device == "cuda" else "cpu",
+        accelerator="gpu",
         devices=1,
         max_epochs=config.epochs,
         min_epochs=config.epochs // 10,
