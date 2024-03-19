@@ -22,3 +22,8 @@ class Config:
 
     def update_config_param(self, args):
         self.__dict__.update(vars(args))
+
+    def collate_fn(batch):
+        imgs, labels = zip(*batch)
+        imgs = torch.stack(imgs, 0)
+        return imgs, labels
