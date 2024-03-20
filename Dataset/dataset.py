@@ -1,127 +1,128 @@
 import os
-from argparse import ArgumentParser
+import re
 from os.path import join
-from os.path import split
+from argparse import ArgumentParser
 
-import albumentations
 import cv2
+import albumentations as A
 import torch
-import torchvision.transforms as transforms
+import torchvision.transforms as T
 from PIL import Image
-from deep_utils import split_extension, log_print
 from torch import nn
 from torch.utils.data import Dataset, DataLoader
 from tqdm import tqdm
 import numpy as np
+from deep_utils import split_extension, log_print
 
 
-class CRNNDataset(Dataset):
+def check_text_validity(sentence: str, valid_chars: str):
+    wrong_chars = set(sentence) - set(valid_chars)
+    return len(wrong_chars) == 0, (None if not wrong_chars else list(wrong_chars)[0])
 
-    def __init__(self, root, characters, transform=None, logger=None):
-        self.transform = transform
-        self.char2label = {char: i + 1 for i, char in enumerate(characters)}
-        self.label2char = {label: char for char, label in self.char2label.items()}
-        self.image_paths, self.labels, self.labels_length = self.get_image_paths(root, characters,chars2label=self.char2label,logger=logger)
-        self.n_classes = len(self.label2char) + 1  
 
-    @staticmethod
-    def text2label(char2label: dict, text: str):
-        return [char2label[t] for t in text]
-    
-    @staticmethod
-    def get_image_paths(root, chars, chars2label, logger=None):
-        paths, labels, labels_length = [], [], []
-        discards = 0
-        for img_name in os.listdir(root):
-            img_path = join(root, img_name)
-            try:
-                if split_extension(img_name)[-1].lower() in ['.jpg', '.png', '.jpeg']:
-                    text = CRNNDataset.get_label(img_path)
-                    is_valid, character = CRNNDataset.check_validity(text, chars)
-                    if is_valid:
-                        label = CRNNDataset.text2label(chars2label, text)
-                        labels.append(label)
-                        paths.append(img_path)
-                        labels_length.append(len(label))
-                    else:
-                        log_print(logger,
-                                  f"[Warning] text for sample: {img_path} is invalid because of the following character: {character}")
-                        discards += 1
+def filename_to_text(fname: str) -> str:
+    return os.path.splitext(fname)[0]
+
+
+def build_dataset_paths(root_dir, vocab, char_to_index, logger=None):
+    img_files, encoded_labels, lengths = [], [], []
+    skip_count = 0
+
+    for f in os.listdir(root_dir):
+        fpath = join(root_dir, f)
+        try:
+            if split_extension(f)[-1].lower() in [".jpg", ".jpeg", ".png"]:
+                text = filename_to_text(f)
+                is_valid, bad = check_text_validity(text, vocab)
+                if is_valid:
+                    enc = [char_to_index[c] for c in text]
+                    img_files.append(fpath)
+                    encoded_labels.append(enc)
+                    lengths.append(len(enc))
                 else:
-                    log_print(logger, f"[Warning] sample: {img_path} does not have a valid extension. Skipping...")
-                    discards += 1
-            except:
-                log_print(logger, f"[Warning] sample: {img_path} is not valid. Skipping...")
-                discards += 1
-        assert len(labels) == len(paths)
-        log_print(logger, f"Successfully gathered {len(labels)} samples and discarded {discards} samples!")
+                    log_print(logger, f"[Skipped] {fpath} -> invalid char: {bad}")
+                    skip_count += 1
+            else:
+                log_print(logger, f"[Skipped] {fpath} unsupported format")
+                skip_count += 1
+        except Exception as e:
+            log_print(logger, f"[Error] {fpath}: {e}")
+            skip_count += 1
 
-        return paths, labels, labels_length
-    
+    log_print(logger, f"Collected {len(img_files)} samples, skipped {skip_count}")
+    return img_files, encoded_labels, lengths
+
+
+class TextImageDataset(Dataset):
+    def __init__(self, root_dir, alphabet, transform=None, logger=None):
+        self.char_to_idx = {c: i + 1 for i, c in enumerate(alphabet)}
+        self.idx_to_char = {i: c for c, i in self.char_to_idx.items()}
+
+        self.paths, self.targets, self.target_sizes = build_dataset_paths(
+            root_dir, alphabet, self.char_to_idx, logger=logger
+        )
+
+        self.transform = transform
+        self.num_classes = len(self.idx_to_char) + 1
+
     def __len__(self):
-        return len(self.image_paths)
-    
+        return len(self.paths)
+
     def __getitem__(self, index):
-        assert index <= len(self), 'index range error'
-        img_path = self.image_paths[index]
-        if isinstance(self.transform, albumentations.core.composition.Compose):
-            #img = cv2.imread(img_path)[..., ::-1]  
-            img = np.array(Image.open(img_path))[..., :3]
-            img = self.transform(image=img)['image'][0:1, ...].unsqueeze(0)  
+        img_path = self.paths[index]
+        img = np.array(Image.open(img_path))[..., :3]
+
+        if isinstance(self.transform, A.Compose):
+            img = self.transform(image=img)["image"][0:1, ...].unsqueeze(0)
         else:
-            img = Image.fromarray(np.array(Image.open(img_path))[..., :3])
-            img = self.transform(img).unsqueeze(0)  
-        label = torch.LongTensor(self.labels[index]).unsqueeze(0)
-        label_length = torch.LongTensor([self.labels_length[index]]).unsqueeze(0)
+            img = self.transform(Image.fromarray(img)).unsqueeze(0)
 
-        return img, label, label_length
-    
-    @staticmethod
-    def check_validity(text, chars):
-        for c in text:
-            if c not in chars:
-                return False, c
-        return True, None
+        label = torch.LongTensor(self.targets[index]).unsqueeze(0)
+        length = torch.LongTensor([self.target_sizes[index]]).unsqueeze(0)
+        return img, label, length
 
     @staticmethod
-    def collate_fn(batch):
-        images, labels, labels_lengths = zip(*batch)
-        images = torch.cat(images, dim=0)
-        labels = [label.squeeze(0) for label in labels]
-        labels = nn.utils.rnn.pad_sequence(labels, padding_value=-100).T
-        labels_lengths = torch.cat(labels_lengths, dim=0)
-        return images, labels, labels_lengths
-    
-def get_mean_std(dataset_dir, alphabets, batch_size, img_h, img_w):
-
-    transformations = transforms.Compose([
-        transforms.Grayscale(),
-        transforms.Resize((img_h, img_w)),
-        transforms.ToTensor()]
-    )
-
-    dataset = CRNNDataset(root=dataset_dir, transform=transformations, characters=alphabets)
-    data_loader = DataLoader(dataset, batch_size=batch_size, collate_fn=dataset.collate_fn)
-    mean, std = 0, 0
-    n_samples = len(dataset)
-    for images, labels, labels_lengths in tqdm(data_loader, desc="Getting mean and std"):
-        # channel wise
-        mean += torch.sum(torch.mean(images, dim=(2, 3)), dim=0)
-        std += torch.sum(torch.std(images, dim=(2, 3)), dim=0)
-    mean /= n_samples
-    std /= n_samples
-    return [round(m, 4) for m in mean.numpy().tolist()], [round(s, 4) for s in std.numpy().tolist()]
+    def merge_batch(batch):
+        imgs, lbls, lens = zip(*batch)
+        imgs = torch.cat(imgs, dim=0)
+        lbls = [l.squeeze(0) for l in lbls]
+        lbls = nn.utils.rnn.pad_sequence(lbls, padding_value=-100).T
+        lens = torch.cat(lens, dim=0)
+        return imgs, lbls, lens
 
 
-if __name__ == '__main__':
+def calc_dataset_statistics(data_dir, alphabet, batch_size, img_h, img_w):
+    tx = T.Compose([
+        T.Grayscale(),
+        T.Resize((img_h, img_w)),
+        T.ToTensor()
+    ])
+
+    ds = TextImageDataset(root_dir=data_dir, alphabet=alphabet, transform=tx)
+    loader = DataLoader(ds, batch_size=batch_size, collate_fn=ds.merge_batch)
+
+    total_mean, total_std = torch.zeros(1), torch.zeros(1)
+    n = len(ds)
+
+    for imgs, _, _ in tqdm(loader, desc="Computing stats"):
+        total_mean += imgs.mean(dim=(0, 2, 3)).sum()
+        total_std += imgs.std(dim=(0, 2, 3)).sum()
+
+    mean_val = (total_mean / n).item()
+    std_val = (total_std / n).item()
+    return [round(mean_val, 4)], [round(std_val, 4)]
+
+
+if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument("--dataset_dir", help="path to dataset")
-    parser.add_argument("--batch_size", default=128, type=int)
-    parser.add_argument("--alphabets", default='ابپتشثجدزسصطعفقکگلمنوهی+۰۱۲۳۴۵۶۷۸۹', help="alphabets used in dataset")
-    parser.add_argument("--img_h", default=32, type=int)
-    parser.add_argument("--img_w", default=100, type=int)
-    args = parser.parse_args()
+    parser.add_argument("--data_dir", help="dataset directory path")
+    parser.add_argument("--batch_size", type=int, default=128)
+    parser.add_argument("--alphabet", default="ابپتشثجدزسصطعفقکگلمنوهی+۰۱۲۳۴۵۶۷۸۹")
+    parser.add_argument("--img_h", type=int, default=32)
+    parser.add_argument("--img_w", type=int, default=128)
 
-    mean, std = get_mean_std(args.dataset_dir, alphabets=args.alphabets, batch_size=args.batch_size,
-                             img_h=args.img_h, img_w=args.img_w)
-    log_print(None, f"MEAN: {mean}, STD: {std}")
+    args = parser.parse_args()
+    mean, std = calc_dataset_statistics(
+        args.data_dir, args.alphabet, args.batch_size, args.img_h, args.img_w
+    )
+    print("Mean:", mean, "Std:", std)

@@ -27,3 +27,11 @@ class Config:
         imgs, labels = zip(*batch)
         imgs = torch.stack(imgs, 0)
         return imgs, labels
+    
+    def get_transforms(img_h, img_w):
+        return A.Compose([
+            A.Resize(img_h, img_w),
+            A.ShiftScaleRotate(shift_limit=0.02, scale_limit=0.1, rotate_limit=5, p=0.5),
+            A.Normalize(mean=[0.5], std=[0.5]),
+            ToTensorV2()
+        ])
