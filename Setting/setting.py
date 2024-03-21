@@ -78,15 +78,13 @@ class FullConfig(TransformSettings):
             vars_dict = vars(args)
         elif isinstance(args, dict):
             vars_dict = args
-        else:
-            raise ValueError("Args must be Namespace or dict.")
+
         for k, v in vars_dict.items():
             if hasattr(self, k):
                 setattr(self, k, v)
             elif k == "visualize":
                 print(" Skipping visualize argument!")
-            else:
-                raise ValueError(f"Key {k} not defined in FullConfig")
+
         self.update_config()
 
     def update_config(self):
