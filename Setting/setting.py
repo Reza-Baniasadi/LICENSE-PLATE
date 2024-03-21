@@ -1,121 +1,108 @@
 import torch
-#from torchvision import transforms
-import albumentations as A
+from torch import nn
 from dataclasses import dataclass
+import albumentations as A
 from albumentations.pytorch import ToTensorV2
 from alphabets import ALPHABETS
 from argparse import Namespace
 
+@dataclass
+class CoreSettings:
+    image_height: int = 32
+    image_width: int = 100
+    model_save_name: str = "latest_plate_model"
+    n_classes: int = 35
+    mean_val: list = (0.485,)
+    std_val: list = (0.19,)
+    alphabet_key: str = "FA_LPR"
+    train_path: str = "/home/user/datasets/train"
+    val_path: str = "/home/user/datasets/val"
+    save_dir: str = "results"
 
-@dataclass(init=True)
-class BasicConfig:
-    img_h = 32 
-    img_w = 100  
-
-    file_name = "best"
-
-    # Modify
-    n_classes = 35
-    mean = [0.4845]
-    std = [0.1884]
-    alphabet_name = "FA_LPR"
-    train_directory = '/home/ai/projects/vehicle-plate-recognition-training/recognition/datasets/train'
-    val_directory = '/home/ai/projects/vehicle-plate-recognition-training/recognition/datasets/val'
-    output_dir = "output"
-
-    def update_basic(self):
+    def refresh_class_count(self):
         self.n_classes = len(self.alphabets) + 1
 
+@dataclass
+class TransformSettings(CoreSettings):
+    train_aug: A.Compose = A.Compose([
+        A.Rotate(limit=12, p=0.25),
+        A.RandomScale(scale_limit=0.25),
+        A.Resize(height=CoreSettings.image_height, width=CoreSettings.image_width),
+        A.Normalize(mean=CoreSettings.mean_val, std=CoreSettings.std_val, max_pixel_value=255.0),
+        A.ToGray(always_apply=True),
+        ToTensorV2()
+    ])
+    val_aug: A.Compose = A.Compose([
+        A.Resize(height=CoreSettings.image_height, width=CoreSettings.image_width),
+        A.Normalize(mean=CoreSettings.mean_val, std=CoreSettings.std_val, max_pixel_value=255.0),
+        A.ToGray(always_apply=True),
+        ToTensorV2()
+    ])
 
-@dataclass(init=True, repr=True)
-class AugConfig(BasicConfig):
-    train_transform = A.Compose(
-        [A.Rotate(limit=10, p=0.2),
-         A.RandomScale(scale_limit=0.2),
-         A.Resize(height=BasicConfig.img_h, width=BasicConfig.img_w),
-         A.Normalize(BasicConfig.mean, BasicConfig.std, max_pixel_value=255.0),
-         A.ToGray(always_apply=True, p=1),
-         ToTensorV2()
-         ])
-    val_transform = A.Compose(
-        [
-         A.Resize(height=BasicConfig.img_h, width=BasicConfig.img_w),
-         A.Normalize(BasicConfig.mean, BasicConfig.std, max_pixel_value=255.0),
-         A.ToGray(always_apply=True, p=1),
-         ToTensorV2()
-         ])
-    
-    def update_aug(self):
-        self.train_transform = A.Compose(
-            [A.Rotate(limit=10, p=0.2),
-             A.RandomScale(scale_limit=0.2),
-             A.Resize(height=self.img_h, width=self.img_w),
-             A.Normalize(self.mean, self.std, max_pixel_value=255.0),
-             A.ToGray(always_apply=True, p=1),
-             ToTensorV2()
-             ])
-        self.val_transform = A.Compose(
-            [A.Resize(height=self.img_h, width=self.img_w),
-             A.Normalize(self.mean, self.std, max_pixel_value=255.0),
-             A.ToGray(always_apply=True, p=1),
-             ToTensorV2()
-             ])
-        
-@dataclass(init=True)
-class Config(AugConfig):
-    n_hidden = 256  # size of the lstm hidden state
-    lstm_input = 64  # size of the lstm_input feature size
-    n_channels = 1
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    lr = 0.0005
-    lr_patience = 10
-    min_lr = 5e-6
-    lr_reduce_factor = 0.1
-    batch_size = 128
-    epochs = 200 
-    n_workers = 8
+    def refresh_transforms(self):
+        self.train_aug = A.Compose([
+            A.Rotate(limit=12, p=0.25),
+            A.RandomScale(scale_limit=0.25),
+            A.Resize(height=self.image_height, width=self.image_width),
+            A.Normalize(mean=self.mean_val, std=self.std_val, max_pixel_value=255.0),
+            A.ToGray(always_apply=True),
+            ToTensorV2()
+        ])
+        self.val_aug = A.Compose([
+            A.Resize(height=self.image_height, width=self.image_width),
+            A.Normalize(mean=self.mean_val, std=self.std_val, max_pixel_value=255.0),
+            A.ToGray(always_apply=True),
+            ToTensorV2()
+        ])
 
-    alphabets = ALPHABETS[BasicConfig.alphabet_name]
-    char2label = dict()
-    label2char = dict()
+@dataclass
+class FullConfig(TransformSettings):
+    lstm_hidden: int = 256
+    lstm_input_size: int = 64
+    input_channels: int = 1
+    device: str = "cuda" if torch.cuda.is_available() else "cpu"
+    learning_rate: float = 0.0005
+    lr_patience_epochs: int = 10
+    min_lr_val: float = 5e-6
+    lr_decay_factor: float = 0.1
+    batch_sz: int = 128
+    total_epochs: int = 200
+    num_workers: int = 8
+    alphabets: list = ALPHABETS[CoreSettings.alphabet_key]
+    char_to_idx: dict = None
+    idx_to_char: dict = None
+    early_stop_patience: int = 30
 
-    # Early stopping
-    early_stopping_patience = 30
-
-    def update_config_param(self, args):
+    def apply_args(self, args):
         if isinstance(args, Namespace):
-            variables = vars(args)
+            vars_dict = vars(args)
         elif isinstance(args, dict):
-            variables = args
+            vars_dict = args
         else:
-            raise ValueError()
-        for k, v in variables.items():
+            raise ValueError("Args must be Namespace or dict.")
+        for k, v in vars_dict.items():
             if hasattr(self, k):
                 setattr(self, k, v)
             elif k == "visualize":
-                print(" Skipped visualize argument!")
+                print(" Skipping visualize argument!")
             else:
-                raise ValueError(f"value {k} is not defined in Config...")
-        self.update()
+                raise ValueError(f"Key {k} not defined in FullConfig")
+        self.update_config()
 
+    def update_config(self):
+        self.char_to_idx = {c: i + 1 for i, c in enumerate(self.alphabets)}
+        self.idx_to_char = {i: c for c, i in self.char_to_idx.items()}
+        self.refresh_class_count()
+        self.refresh_transforms()
 
-    def update(self):
-        self.char2label = {char: i + 1 for i, char in enumerate(self.alphabets)}
-        self.label2char = {label: char for char, label in self.char2label.items()}
-        self.update_basic()
-        self.update_aug()
-
-    def __repr__(self):
-        variables = vars(self)
-        return f"{self.__class__.__name__} -> " + ", ".join(f"{k}: {v}" for k, v in variables.items())
-    
-
-    def vars(self) -> dict:
-        out = dict()
+    def as_dict(self):
+        cfg = {}
         for key in dir(self):
             val = getattr(self, key)
-            if (key.startswith("__") and key.endswith("__")) or type(val).__name__ == "method":
+            if key.startswith("__") or callable(val):
                 continue
-            else:
-                out[key] = val
-        return out
+            cfg[key] = val
+        return cfg
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}: " + ", ".join(f"{k}={v}" for k, v in self.as_dict().items())
