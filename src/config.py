@@ -1,37 +1,51 @@
-class Config:
+import torch
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
+
+class TrainingSettings:
     def __init__(self):
-        self.output_dir = "./output"
-        self.epochs = 100
-        self.device = "cuda"
-        self.mean = [0.4845]
-        self.std = [0.1884]
-        self.img_h = 32
-        self.img_w = 100
-        self.n_channels = 1
-        self.n_classes = 50  
-        self.n_hidden = 256
-        self.lstm_input = 256
-        self.lr = 1e-3
-        self.lr_reduce_factor = 0.1
-        self.lr_patience = 5
-        self.min_lr = 1e-6
-        self.early_stopping_patience = 10
-        self.file_name = "best_model"
+        self.save_path = "./trained_output"
+        self.total_epochs = 120
+        self.device_type = "cuda" if torch.cuda.is_available() else "cpu"
+        self.image_mean = [0.485]
+        self.image_std = [0.19]
+        self.height = 32
+        self.width = 100
+        self.channels = 1
+        self.num_classes = 50
+        self.lstm_hidden_size = 256
+        self.lstm_input_dim = 256
+        self.learning_rate = 1e-3
+        self.lr_decay_factor = 0.1
+        self.lr_patience_epochs = 5
+        self.min_learning_rate = 1e-6
+        self.early_stop_patience = 12
+        self.model_name = "latest_plate_model"
         self.batch_size = 128
-        self.n_workers = 8
+        self.worker_count = 8
 
-    def update_config_param(self, args):
-        self.__dict__.update(vars(args))
+    def apply_args(self, args):
 
-    def collate_fn(batch):
-        imgs, labels = zip(*batch)
-        imgs = torch.stack(imgs, 0)
-        return imgs, labels
-    
-    def get_transforms(img_h, img_w):
+        if hasattr(args, "__dict__"):
+            self.__dict__.update(vars(args))
+        elif isinstance(args, dict):
+            self.__dict__.update(args)
+        else:
+            raise ValueError("args must be Namespace or dict")
+
+    @staticmethod
+    def pack_batch(batch):
+  
+        images, labels = zip(*batch)
+        images_tensor = torch.stack(images, dim=0)
+        return images_tensor, labels
+
+    @staticmethod
+    def build_transforms(height, width):
+
         return A.Compose([
-            A.Resize(img_h, img_w),
-            A.ShiftScaleRotate(shift_limit=0.02, scale_limit=0.1, rotate_limit=5, p=0.5),
-            A.Normalize(mean=[0.5], std=[0.5]),
+            A.Resize(height=height, width=width),
+            A.ShiftScaleRotate(shift_limit=0.03, scale_limit=0.12, rotate_limit=7, p=0.6),
+            A.Normalize(mean=[0.485], std=[0.19]),
             ToTensorV2()
         ])
