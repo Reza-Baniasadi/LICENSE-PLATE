@@ -25,7 +25,7 @@ class TrainingSettings:
         self.worker_count = 8
 
     def apply_args(self, args):
-
+        """آپدیت کردن تنظیمات با Namespace یا dict ورودی"""
         if hasattr(args, "__dict__"):
             self.__dict__.update(vars(args))
         elif isinstance(args, dict):
@@ -35,14 +35,14 @@ class TrainingSettings:
 
     @staticmethod
     def pack_batch(batch):
-  
+        """ترکیب تصاویر و لیبل‌ها در یک batch"""
         images, labels = zip(*batch)
         images_tensor = torch.stack(images, dim=0)
         return images_tensor, labels
 
     @staticmethod
     def build_transforms(height, width):
-
+        """ایجاد pipeline آگوژمنتیشن برای تصاویر"""
         return A.Compose([
             A.Resize(height=height, width=width),
             A.ShiftScaleRotate(shift_limit=0.03, scale_limit=0.12, rotate_limit=7, p=0.6),
