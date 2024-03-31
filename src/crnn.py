@@ -3,58 +3,61 @@ import torch.nn as nn
 import torch.nn.functional as F
 import pytorch_lightning as pl
 
-class SequencePlateNet(pl.LightningModule):
-    def __init__(self, height, channels, num_classes, hidden_dim, lstm_input_dim,
-                 lr_value, reduce_factor, patience_count, min_lr_value):
+class PlateSequenceModel(pl.LightningModule):
+    def __init__(self, img_height, in_channels, num_labels, hidden_units, lstm_feat_dim,
+                 learning_rate, reduce_lr_factor, patience_limit, min_learning_rate):
         super().__init__()
         self.save_hyperparameters()
 
-        self.feature_net = nn.Sequential(
-            nn.Conv2d(channels, 64, 3, padding=1),
-            nn.BatchNorm2d(64),
-            nn.LeakyReLU(0.1),
-            nn.MaxPool2d(2)
+        # Feature extractor
+        self.encoder_block = nn.Sequential(
+            nn.Conv2d(in_channels, 64, kernel_size=3, stride=1, padding=1),
+            nn.GroupNorm(8, 64),
+            nn.ELU(),
+            nn.MaxPool2d(2, 2)
         )
 
-        self.lstm_net = nn.LSTM(
-            input_size=lstm_input_dim,
-            hidden_size=hidden_dim,
+        # Sequential model
+        self.sequence_model = nn.LSTM(
+            input_size=lstm_feat_dim,
+            hidden_size=hidden_units,
             num_layers=2,
-            batch_first=True,
-            bidirectional=True
+            bidirectional=True,
+            batch_first=True
         )
 
-        self.output_layer = nn.Linear(hidden_dim * 2, num_classes)
-        self.lr_value = lr_value
+        # Prediction layer
+        self.prediction_head = nn.Linear(hidden_units * 2, num_labels)
+        self.lr_val = learning_rate
 
-    def forward(self, input_tensor):
-        feat_map = self.feature_net(input_tensor)          # [B, C, H, W]
-        feat_map = feat_map.permute(0, 3, 1, 2)           # [B, W, C, H]
-        batch_size, width, channels, height = feat_map.shape
-        seq_input = feat_map.reshape(batch_size, width, channels * height)
-        lstm_out, _ = self.lstm_net(seq_input)
-        predictions = self.output_layer(lstm_out)
-        return predictions
+    def forward_pass(self, images):
+        features = self.encoder_block(images)        # [B, C, H, W]
+        features = features.permute(0, 3, 1, 2)     # [B, W, C, H]
+        B, W, C, H = features.shape
+        sequence_input = features.reshape(B, W, C * H)
+        seq_out, _ = self.sequence_model(sequence_input)
+        output_logits = self.prediction_head(seq_out)
+        return output_logits
 
-    def step(self, batch, prefix="train"):
-        imgs, labels = batch
-        logits = self(imgs)
-        loss_val = F.cross_entropy(logits.view(-1, logits.size(-1)), labels.view(-1))
-        self.log(f"{prefix}_loss", loss_val, prog_bar=True)
-        return loss_val
+    def compute_loss(self, batch_data, phase="train"):
+        imgs, lbls = batch_data
+        logits = self.forward_pass(imgs)
+        loss_value = F.cross_entropy(logits.view(-1, logits.size(-1)), lbls.view(-1))
+        self.log(f"{phase}_loss", loss_value, prog_bar=True)
+        return loss_value
 
     def training_step(self, batch, batch_idx):
-        return self.step(batch, "train")
+        return self.compute_loss(batch, "train")
 
     def validation_step(self, batch, batch_idx):
-        return self.step(batch, "val")
+        return self.compute_loss(batch, "val")
 
-    def configure_optimizers(self):
-        opt = torch.optim.Adam(self.parameters(), lr=self.lr_value)
+    def setup_optimizer_scheduler(self):
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.lr_val)
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            opt,
-            factor=self.hparams.reduce_factor,
-            patience=self.hparams.patience_count,
-            min_lr=self.hparams.min_lr_value
+            optimizer,
+            factor=self.hparams.reduce_lr_factor,
+            patience=self.hparams.patience_limit,
+            min_lr=self.hparams.min_learning_rate
         )
-        return {"optimizer": opt, "lr_scheduler": scheduler, "monitor": "val_loss"}
+        return {"optimizer": optimizer, "lr_scheduler": scheduler, "monitor": "val_loss"}
