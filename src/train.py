@@ -3,65 +3,76 @@ from pathlib import Path
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint, LearningRateMonitor
 
-from config import Config
-from models.crnn import LitCRNN
-from data.dataloader import get_loaders
-from data.visualize import visualize_data_loader
-from utils.logger import get_logger
-from utils.misc import mkdir_incremental
+from config import TrainingConfig
+from models.crnn_model import CRNNNetwork
+from data.data_utils import load_datasets
+from data.visualize_utils import display_batch
+from utils.logger_utils import setup_logger
+from utils.file_ops import ensure_unique_dir
 
 
-def main():
-    parser = ArgumentParser()
-    parser.add_argument("--train_directory", type=Path, default="./datasets/train")
-    parser.add_argument("--val_directory", type=Path, default="./datasets/val")
-    parser.add_argument("--output_dir", type=Path, default="./output")
-    parser.add_argument("--epochs", type=int, default=100)
-    parser.add_argument("--device", default="cuda")
-    parser.add_argument("--mean", nargs="+", type=float, default=[0.4845])
-    parser.add_argument("--std", nargs="+", type=float, default=[0.1884])
-    parser.add_argument("--img_w", type=int, default=100)
-    parser.add_argument("--n_workers", type=int, default=8)
-    parser.add_argument("--batch_size", type=int, default=128)
-    parser.add_argument("--alphabets", default='ابپتشثجدزسصطعفقکگلمنوهی+۰۱۲۳۴۵۶۷۸۹')
-    parser.add_argument("--visualize", action="store_true")
+def launch_training():
+    parser = ArgumentParser(description="CRNN Training Pipeline")
+    parser.add_argument("--train_folder", type=Path, default="./datasets/train")
+    parser.add_argument("--validation_folder", type=Path, default="./datasets/val")
+    parser.add_argument("--results_folder", type=Path, default="./results")
+    parser.add_argument("--num_epochs", type=int, default=120)
+    parser.add_argument("--device_type", default="cuda")
+    parser.add_argument("--mean_vals", nargs="+", type=float, default=[0.4845])
+    parser.add_argument("--std_vals", nargs="+", type=float, default=[0.1884])
+    parser.add_argument("--width", type=int, default=100)
+    parser.add_argument("--num_workers", type=int, default=4)
+    parser.add_argument("--batch", type=int, default=64)
+    parser.add_argument("--alphabet_chars", default='ابپتشثجدزسصطعفقکگلمنوهی+۰۱۲۳۴۵۶۷۸۹')
+    parser.add_argument("--preview_data", action="store_true")
 
     args = parser.parse_args()
-    config = Config()
-    config.update_config_param(args)
+    cfg = TrainingConfig()
+    cfg.update_from_args(args)
 
-    output_dir = mkdir_incremental(config.output_dir)
-    logger = get_logger("pytorch-lightning-crnn", log_path=output_dir / "log.log")
+    output_path = ensure_unique_dir(cfg.results_path)
+    log = setup_logger("CRNN_Lightning", file_output=output_path / "train.log")
 
-    early_stopping = EarlyStopping(monitor='val_loss', patience=config.early_stopping_patience)
-    model_checkpoint = ModelCheckpoint(dirpath=output_dir, filename=config.file_name,
-                                       monitor="val_loss", verbose=True)
-    learning_rate_monitor = LearningRateMonitor(logging_interval="epoch")
+    early_stop_callback = EarlyStopping(monitor="val_loss", patience=cfg.early_stop_patience)
+    checkpoint_callback = ModelCheckpoint(
+        dirpath=output_path,
+        filename=cfg.best_model_name,
+        monitor="val_loss",
+        verbose=True
+    )
+    lr_monitor = LearningRateMonitor(logging_interval="epoch")
 
-    trainer = pl.Trainer(
-        accelerator="gpu",
+    trainer_engine = pl.Trainer(
+        accelerator="gpu" if cfg.device == "cuda" else "cpu",
         devices=1,
-        max_epochs=config.epochs,
-        min_epochs=config.epochs // 10,
-        callbacks=[early_stopping, model_checkpoint, learning_rate_monitor],
-        default_root_dir=output_dir
+        max_epochs=cfg.epochs,
+        callbacks=[early_stop_callback, checkpoint_callback, lr_monitor],
+        default_root_dir=output_path
     )
 
-    model = LitCRNN(config.img_h, config.n_channels, config.n_classes,
-                    config.n_hidden, config.lstm_input, config.lr,
-                    config.lr_reduce_factor, config.lr_patience, config.min_lr)
+    model_net = CRNNNetwork(
+        input_height=cfg.img_height,
+        input_channels=cfg.channels,
+        num_classes=cfg.num_classes,
+        hidden_units=cfg.hidden_units,
+        lstm_features=cfg.lstm_input_dim,
+        learning_rate=cfg.lr,
+        lr_reduce_factor=cfg.lr_reduce_factor,
+        lr_patience=cfg.lr_patience,
+        min_lr=cfg.min_lr
+    )
 
-    train_loader, val_loader = get_loaders(config)
+    train_loader, val_loader = load_datasets(cfg)
 
-    if args.visualize:
-        print("[INFO] Visualizing train-loader")
-        visualize_data_loader(train_loader, mean=config.mean, std=config.std)
-        print("[INFO] Visualizing val-loader")
-        visualize_data_loader(val_loader, mean=config.mean, std=config.std)
+    if args.preview_data:
+        print("[INFO] Displaying sample batches from train_loader")
+        display_batch(train_loader, mean=cfg.mean_vals, std=cfg.std_vals)
+        print("[INFO] Displaying sample batches from val_loader")
+        display_batch(val_loader, mean=cfg.mean_vals, std=cfg.std_vals)
         exit(0)
 
-    trainer.fit(model, train_loader, val_loader)
+    trainer_engine.fit(model_net, train_loader, val_loader)
 
 
 if __name__ == "__main__":
-    main()
+    launch_training()
