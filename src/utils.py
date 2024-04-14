@@ -1,12 +1,13 @@
 from pathlib import Path
 
+def create_unique_directory(base_path: Path):
+    base_path = Path(base_path)
+    counter = 0
+    unique_path = base_path
 
-def mkdir_incremental(path: Path):
-    path = Path(path)
-    i = 0
-    new_path = path
-    while new_path.exists():
-        i += 1
-        new_path = path.parent / f"{path.name}_{i}"
-    new_path.mkdir(parents=True, exist_ok=True)
-    return new_path
+    while unique_path.exists():
+        counter += 1
+        unique_path = base_path.parent / f"{base_path.stem}_{counter}"
+
+    unique_path.mkdir(parents=True, exist_ok=True)
+    return unique_path
