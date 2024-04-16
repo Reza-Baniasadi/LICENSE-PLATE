@@ -12,3 +12,17 @@ from dataloader_module import get_loaders
 from logger_module import initialize_logger
 from utils_module import mkdir_incremental, visualize_data_loader
 
+
+def test_dataset():
+    print("=== Testing OCRDataset ===")
+    sample_alphabet = "ABCD0123"
+    dummy_dir = Path("./dummy_dataset")
+    dummy_dir.mkdir(exist_ok=True)
+    for i in range(3):
+        img = Image.fromarray(np.random.randint(0, 255, (32, 100), dtype=np.uint8))
+        img.save(dummy_dir / f"A{i}.png")
+    dataset = OCRDataset(str(dummy_dir), sample_alphabet)
+    print("Length:", len(dataset))
+    img, label = dataset[0]
+    print("Image shape:", img.size())
+    print("Label:", label)
