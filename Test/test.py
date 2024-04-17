@@ -26,3 +26,25 @@ def test_dataset():
     img, label = dataset[0]
     print("Image shape:", img.size())
     print("Label:", label)
+
+
+
+def test_transforms():
+    print("\n=== Testing Transforms ===")
+    img_h, img_w = 32, 100
+    transforms = A.Compose([
+        A.Resize(img_h, img_w),
+        A.Normalize(mean=[0.5], std=[0.5]),
+        ToTensorV2()
+    ])
+    img = np.random.randint(0, 255, (40, 120, 3), dtype=np.uint8)
+    transformed = transforms(image=img)['image']
+    print("Transformed image shape:", transformed.shape)
+
+
+def test_config():
+    print("\n=== Testing Config ===")
+    cfg = Config()
+    print(cfg.__dict__)
+    cfg.update_config_param({"batch_size": 64, "img_w": 120})
+    print("Updated batch size:", cfg.batch_size, "Updated img_w:", cfg.img_w)
