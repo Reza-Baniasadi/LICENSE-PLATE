@@ -48,3 +48,13 @@ def test_config():
     print(cfg.__dict__)
     cfg.update_config_param({"batch_size": 64, "img_w": 120})
     print("Updated batch size:", cfg.batch_size, "Updated img_w:", cfg.img_w)
+    
+
+def test_model_forward():
+    print("\n=== Testing LitCRNN forward ===")
+    cfg = Config()
+    model = LitCRNN(cfg.img_h, cfg.n_channels, cfg.n_classes, cfg.n_hidden, cfg.lstm_input,
+                    cfg.lr, cfg.lr_reduce_factor, cfg.lr_patience, cfg.min_lr)
+    dummy_input = torch.randn(2, cfg.n_channels, cfg.img_h, cfg.img_w)
+    output = model(dummy_input)
+    print("Output shape:", output.shape)
