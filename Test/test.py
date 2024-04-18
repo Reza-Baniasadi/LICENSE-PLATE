@@ -48,7 +48,7 @@ def test_config():
     print(cfg.__dict__)
     cfg.update_config_param({"batch_size": 64, "img_w": 120})
     print("Updated batch size:", cfg.batch_size, "Updated img_w:", cfg.img_w)
-    
+
 
 def test_model_forward():
     print("\n=== Testing LitCRNN forward ===")
@@ -58,3 +58,8 @@ def test_model_forward():
     dummy_input = torch.randn(2, cfg.n_channels, cfg.img_h, cfg.img_w)
     output = model(dummy_input)
     print("Output shape:", output.shape)
+
+def test_logger():
+    print("\n=== Testing Logger ===")
+    log = initialize_logger("TestLogger")
+    log.info("This is a test log message.")
