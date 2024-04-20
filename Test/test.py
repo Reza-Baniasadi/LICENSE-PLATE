@@ -63,3 +63,9 @@ def test_logger():
     print("\n=== Testing Logger ===")
     log = initialize_logger("TestLogger")
     log.info("This is a test log message.")
+    
+def test_mkdir_incremental():
+    print("\n=== Testing mkdir_incremental ===")
+    path = Path("./test_output")
+    new_path = mkdir_incremental(path)
+    print("New directory created at:", new_path)
