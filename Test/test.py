@@ -79,3 +79,12 @@ def test_dataloader_visualization():
     loader = DataLoader(dataset, batch_size=2)
     visualize_data_loader(loader, mean=[0.5], std=[0.5])
 
+
+if __name__ == "__main__":
+    test_dataset()
+    test_transforms()
+    test_config()
+    test_model_forward()
+    test_logger()
+    test_mkdir_incremental()
+    test_dataloader_visualization()
