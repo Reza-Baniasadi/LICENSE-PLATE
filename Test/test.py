@@ -63,9 +63,19 @@ def test_logger():
     print("\n=== Testing Logger ===")
     log = initialize_logger("TestLogger")
     log.info("This is a test log message.")
-    
+
 def test_mkdir_incremental():
     print("\n=== Testing mkdir_incremental ===")
     path = Path("./test_output")
     new_path = mkdir_incremental(path)
     print("New directory created at:", new_path)
+
+
+def test_dataloader_visualization():
+    print("\n=== Testing DataLoader & Visualization ===")
+    sample_alphabet = "ABCD0123"
+    dummy_dir = Path("./dummy_dataset")
+    dataset = OCRDataset(str(dummy_dir), sample_alphabet)
+    loader = DataLoader(dataset, batch_size=2)
+    visualize_data_loader(loader, mean=[0.5], std=[0.5])
+
